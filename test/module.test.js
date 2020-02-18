@@ -12,7 +12,8 @@ describe('auth', () => {
   beforeAll(async () => {
     browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+      ignoreDefaultArgs: ['--disable-extensions']
     })
 
     nuxt = new Nuxt(config)
@@ -40,18 +41,25 @@ describe('auth', () => {
     await page.goto(url('/'))
     await page.waitForFunction('!!window.$nuxt')
 
-    const { token, user, axiosBearer } = await page.evaluate(async () => {
-      await window.$nuxt.$auth.loginWith('local', {
+    const {
+      token,
+      user,
+      axiosBearer,
+      response
+    } = await page.evaluate(async () => {
+      const response = await window.$nuxt.$auth.loginWith('local', {
         data: { username: 'test_username', password: '123' }
       })
 
       return {
         axiosBearer: window.$nuxt.$axios.defaults.headers.common.Authorization,
         token: window.$nuxt.$auth.getToken('local'),
-        user: window.$nuxt.$auth.user
+        user: window.$nuxt.$auth.user,
+        response
       }
     })
 
+    expect(response).toBeDefined()
     expect(axiosBearer).toBeDefined()
     expect(axiosBearer.split(' ')).toHaveLength(2)
     expect(axiosBearer.split(' ')[0]).toMatch(/^Bearer$/i)
